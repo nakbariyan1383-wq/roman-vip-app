@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
 const String apiUrl = 'https://roman-vip.ir/app-api.php';
+// شماره اختصاصی مدیر و نویسنده اپلیکیشن
+const String adminPhoneNumber = '09904677308';
 
 void main() => runApp(const RomanVipApp());
 
@@ -257,7 +259,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Icon(Icons.edit_note, color: Color(0xff7546a8)),
                 SizedBox(width: 8),
-                Text('پنل نویسنده: ثبت رمان'),
+                Text('پنل مدیریت: ثبت رمان'),
               ],
             ),
             content: SingleChildScrollView(
@@ -335,87 +337,104 @@ class _HomePageState extends State<HomePage> {
   }
 
   @override
-  Widget build(BuildContext context) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: DefaultTabController(
-          length: 2,
-          child: Scaffold(
-            appBar: AppBar(
-              title: const Text('رمان VIP'),
-              centerTitle: true,
-              actions: [
-                if (_currentUserPhone != null)
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Text(_currentUserPhone!, style: const TextStyle(fontSize: 12)),
-                    ),
-                  ),
-                IconButton(
-                  icon: Icon(_currentUserPhone == null ? Icons.account_circle_outlined : Icons.logout),
-                  tooltip: _currentUserPhone == null ? 'ورود / عضویت' : 'خروج',
-                  onPressed: () {
-                    if (_currentUserPhone == null) {
-                      _openAuthDialog();
-                    } else {
-                      setState(() => _currentUserPhone = null);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('از حساب خارج شدید')),
-                      );
-                    }
-                  },
-                ),
-              ],
-              bottom: const TabBar(
-                tabs: [
-                  Tab(icon: Icon(Icons.menu_book_outlined), text: 'رمان‌های آنلاین'),
-                  Tab(icon: Icon(Icons.picture_as_pdf_outlined), text: 'رمان‌های PDF'),
-                ],
-              ),
-            ),
-            body: FutureBuilder<List<Novel>>(
-              future: _novels,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.cloud_off, size: 48, color: Colors.grey),
-                          const SizedBox(height: 12),
-                          Text(snapshot.error.toString(), textAlign: TextAlign.center),
-                          const SizedBox(height: 16),
-                          FilledButton(onPressed: _loadNovels, child: const Text('تلاش دوباره')),
-                        ],
+  Widget build(BuildContext context) {
+    // بررسی اینکه آیا کاربر لاگین کرده مدیر (شما) است یا خیر
+    final bool isAdmin = _currentUserPhone == adminPhoneNumber;
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: DefaultTabController(
+        length: 2,
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('رمان VIP'),
+            centerTitle: true,
+            actions: [
+              if (_currentUserPhone != null)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      isAdmin ? 'مدیر: $_currentUserPhone' : _currentUserPhone!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isAdmin ? FontWeight.bold : FontWeight.normal,
+                        color: isAdmin ? const Color(0xff7546a8) : Colors.black87,
                       ),
                     ),
-                  );
-                }
-                final novels = snapshot.data ?? [];
-                final onlineNovels = novels.where((n) => n.type == 'online').toList();
-                final pdfNovels = novels.where((n) => n.type == 'pdf').toList();
-
-                return TabBarView(
-                  children: [
-                    _NovelListView(novels: onlineNovels, isPdfTab: false, onRefresh: _loadNovels),
-                    _NovelListView(novels: pdfNovels, isPdfTab: true, onRefresh: _loadNovels),
-                  ],
-                );
-              },
-            ),
-            floatingActionButton: FloatingActionButton.extended(
-              onPressed: _showAddNovelDialog,
-              icon: const Icon(Icons.add),
-              label: const Text('افزودن رمان (نویسنده)'),
+                  ),
+                ),
+              IconButton(
+                icon: Icon(_currentUserPhone == null ? Icons.account_circle_outlined : Icons.logout),
+                tooltip: _currentUserPhone == null ? 'ورود / عضویت' : 'خروج',
+                onPressed: () {
+                  if (_currentUserPhone == null) {
+                    _openAuthDialog();
+                  } else {
+                    setState(() => _currentUserPhone = null);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('از حساب خارج شدید')),
+                    );
+                  }
+                },
+              ),
+            ],
+            bottom: const TabBar(
+              tabs: [
+                Tab(icon: Icon(Icons.menu_book_outlined), text: 'رمان‌های آنلاین'),
+                Tab(icon: Icon(Icons.picture_as_pdf_outlined), text: 'رمان‌های PDF'),
+              ],
             ),
           ),
+          body: FutureBuilder<List<Novel>>(
+            future: _novels,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.cloud_off, size: 48, color: Colors.grey),
+                        const SizedBox(height: 12),
+                        Text(snapshot.error.toString(), textAlign: TextAlign.center),
+                        const SizedBox(height: 16),
+                        FilledButton(onPressed: _loadNovels, child: const Text('تلاش دوباره')),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              final novels = snapshot.data ?? [];
+              final onlineNovels = novels.where((n) => n.type == 'online').toList();
+              final pdfNovels = novels.where((n) => n.type == 'pdf').toList();
+
+              return TabBarView(
+                children: [
+                  _NovelListView(novels: onlineNovels, isPdfTab: false, onRefresh: _loadNovels),
+                  _NovelListView(novels: pdfNovels, isPdfTab: true, onRefresh: _loadNovels),
+                ],
+              );
+            },
+          ),
+          // این دکمه فقط و فقط برای شماره شما نمایش داده می‌شود
+          floatingActionButton: isAdmin
+              ? FloatingActionButton.extended(
+                  onPressed: _showAddNovelDialog,
+                  icon: const Icon(Icons.add),
+                  label: const Text('افزودن رمان (مدیر)'),
+                  backgroundColor: const Color(0xff7546a8),
+                  foregroundColor: Colors.white,
+                )
+              : null,
         ),
-      );
+      ),
+    );
+  }
 }
 
 class _NovelListView extends StatelessWidget {
